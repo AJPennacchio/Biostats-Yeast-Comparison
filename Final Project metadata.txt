@@ -1,0 +1,11 @@
+﻿df - used in part 1 of our experiment in which we test the effect of yeast type and sugar level on 
+alcohol concentration
+1. Sugar → Measured in grams, indicates the amount of sugar added. Explanatory variable
+2. Treatment → Type of yeast used. Explanatory variable
+3. Alcohol_concentration → Amount of alcohol produced, measured in alcohol by volume 
+
+
+df2 - used in part 2 of our experiment in which we test the effect of sugar type on alcohol 
+concentration 
+1. Sugar_type → Type of sugar added (40g), sucrose, maltose, or glucose
+2. Alc_concentration → Amount of alcohol produced, measured in alcohol by volume (%)

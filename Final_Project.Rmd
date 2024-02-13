@@ -1,0 +1,166 @@
+---
+title: "Final_Project"
+author: "Alex Pennacchio"
+date: "2023-11-27"
+output: word_document
+---
+Background: 
+
+To make wine, yeast and sugars are added to grape juice and allowed to ferment for a period of time. In the process of fermentation, the yeast uses up the sugar and produces alcohol as a byproduct. However, different strains of yeast can affect the amount of alcohol produced, impacting the final concentration of the wine. In this experiment, we compare how the strain of yeast and sugar concentration impacts the final alcohol concentration. We test two strains of yeast commonly used in wine-making, *Saccharomyces cerevisiae* and *Saccharomyces bayanus*. 
+
+We will measure the final alcohol concentration of the wine produced by each of the two strains of yeast with different levels of sugar added (0-40 grams, in increments of 8 grams). We also include a control group, in which no yeast is added to the grape juice.
+
+Biological hypothesis: 
+  Increasing sugar concentration will increase final alcohol concentration because the yeast will have more substrate to metabolize. Additionally, *S. cerevisiae* will produce the highest concentration of alcohol because *S. bayanus* is best suited for cold temperatures and will likely have a lower metabolic rate. We predict yeast type and sugar levels will be related with alcohol production. 
+  
+  Statistical Hypothesis: 
+  
+  H0: B = 0
+  HA: B != 0
+
+We first want to figure out what our sample size should be for each group. We run a power test here, using an f value of 0.40 to detect a large effect size. We have 3 groups * 6 sugar levels, so our u = 17. 
+```{r}
+library(pwr)
+pwr.f2.test(u = 17, v = NULL, f2 = 0.4, sig.level = 0.05, power = 0.8)
+```
+We find that we need about 63 replicates per strain of yeast and sugar level. To account for possible data loss, we will round up to n = 70 per group. 
+
+We will now generate our data set. For each group (control, *Saccharomyces cerevisiae*, *Saccharomyces bayanus*) we will test alcohol concentration at 6 different sugar levels (0-40 grams, in increments of 8 grams). 
+```{r}
+set.seed(37)
+control <- c(rnorm(70, 0, sd = 0), #select 6 random samples from a population with mean = 0 sd = 0
+             rnorm(70, 0.1, sd = 0.03), #repeat for sugar level = 8g
+             rnorm(70, 0.1, sd = 0.03), #repeat for sugar level = 16g
+             rnorm(70, 0.1, sd = 0.03), #repeat for sugar level = 24g
+             rnorm(70, 0.1, sd = 0.03), #repeat for sugar level = 32g
+             rnorm(70, 0.1, sd = 0.03)) #repeat for sugar level = 40g
+
+S_cerv <- c(rnorm(70, 5, sd = 1), 
+           rnorm(70, 7, sd = 1),
+           rnorm(70, 8.5, sd = 1),
+           rnorm(70, 10, sd = 1),
+           rnorm(70, 12.5, sd = 1),
+           rnorm(70, 15, sd = 1))
+
+S_bay <- c(rnorm(70, 5, sd = 1),
+          rnorm(70, 6, sd = 1),
+          rnorm(70, 7, sd = 1),
+          rnorm(70, 8, sd = 1),
+          rnorm(70, 9, sd = 1),
+          rnorm(70, 10, sd = 1))
+
+# create the sugar variable
+sugar <- rep(seq(0,40, by=8), each = 70, times= 3)
+
+# create the treatment variable
+treatment <- rep(c("control", "S_cerv", "S_bay"), each=420)
+
+# put all variables together into a dataset
+df <- data.frame(sugar, treatment, alcohol_concentration = c(control, S_cerv, S_bay))
+write.csv(df, "df.csv")
+```
+
+We want to check if the data meets the assumptions needed to fit a linear model using these diagnostic plots. 
+```{r}
+lm.out <- lm(alcohol_concentration ~ treatment + sugar + treatment*sugar, data=df)
+plot(lm.out)
+```
+
+
+The diagnostic plots indicate that our data meets the assumptions needed for a linear model. We will now visualize out dataset, fitting a linear model for the data for each treatment group. 
+
+```{r}
+library(ggplot2)
+
+ggplot()+
+  geom_point(data=df, aes(x=sugar, y=alcohol_concentration, color=treatment),
+              alpha=0.5)+
+  stat_smooth(data=df, aes(x=sugar, y=alcohol_concentration, color=treatment),
+              method="lm", se=F)+
+  scale_color_manual(values=c("blue","red", "yellow"))+
+  xlab("Sugar added (grams)")+
+  ylab("Final alcohol concentration (%)")
+```
+
+The graph indicates that *S. cerevisiae* produces the highest alcohol concentration at all amounts of sugar added.
+
+We now want to determine how well the linear models fit the data and test for interactions between yeast type and amount of sugar added. 
+
+```{r}
+summary(lm.out)
+```
+We have found that there is a significant interaction between sugar level and yeast type (treatmentS_bay:sugar and treatmentS_cerv:sugar both have significant p values). Additionally, we can see that the yeast type and sugar level explain a large proportion of the variability in our data (large R^2 values). Our linear models do an effective job in describing the data. Generally, the trend is that as sugar increases, so does alcohol concentration. However, the amount that alcohol concentration increases is also dependent on yeast type, with *S. cerevisiae* having the greatest rate of increase (as sugar levels increase). Therefore we can conclude that *S. cerevisiae* produces a the highest concentration of alcohol out of the groups we tested.  
+
+We now want to test whether the type of sugar added to the wine can impact the final concentration of the alcohol for the *S. cerevisiae group*. We will test 2 different types of sugars: maltose and glucose (40g will be used for all sugar types). A group with no sugar added will be used as a control.  
+
+Biological hypothesis: 
+Studies have shown that *S. cerevisiae* can most efficiently metabolize glucose due to its chemical structure. As a monosaccharide, it can be more easily broken down than maltose, which is a disaccharide. We therefore predict that wine with glucose added will have a higher alcohol concentration than either of the two other groups. 
+
+Statistical hypotheses:
+
+H0: There will be no difference in mean alcohol concentration for the 3 groups.
+HA: Atleast one group will have a different mean alcohol concentration. 
+
+
+Generate and visualize the data: 
+```{r}
+df2 <- data.frame(alc_concentration = c(rnorm(10, 14, 1.2),
+                                           rnorm(10, 20, 1.3),
+                                           rnorm(10, 5, 1.3)),
+                      sugar_type = rep(c("maltose", "glucose", "control"), each=10))
+
+ggplot(df2, aes(x=sugar_type, y=alc_concentration, fill=sugar_type)) +
+  geom_boxplot() + 
+  ylab("Final alcohol concentration (%)") +
+  scale_fill_manual(values = c("maltose" = "green", "glucose" = "blue", "control" = "grey"))
+
+write.csv(df2, "df2.csv")
+```
+
+Before running an ANOVA, we must make sure the data meets all assumptions. We first test for normality. 
+
+H0: Data is normally distributed.
+HA: Data is not normally distributed. 
+```{r}
+
+maltose <- subset(df2, sugar_type == "maltose")
+glucose <- subset(df2, sugar_type == "glucose")
+control <- subset(df2, sugar_type == "control")
+
+shapiro.test(maltose$alc_concentration)
+shapiro.test(glucose$alc_concentration)
+shapiro.test(control$alc_concentration)
+```
+
+All p values are non-significant, indicating the data is normally distributed (fail to reject H0). We now assess the data to make sure the variances are equal. 
+
+H0: Variances are equal.
+HA: Variances are not equal. 
+```{r}
+library(car)
+leveneTest(df2$alc_concentration, df2$sugar_type)
+```
+
+Our p-value again is non-significant, so we have met all assumptions (normality and equal variances) needed to run an ANOVA. 
+
+H0: There will be no difference in mean alcohol concentration for the 3 groups.
+HA: Atleast one group will have a different mean alcohol concentration. 
+
+Run ANOVA: 
+```{r}
+anova.results <- aov(alc_concentration ~ sugar_type, data=df2)
+summary(anova.results)
+```
+
+Our p value is significant, so we know atleast 1 group significantly differs (we reject H0). We now run a Tukey-Kramer as a post-hoc, prior testing has shown all assumptions are met. 
+
+H0: There will be no difference in mean alcohol concentration for the 3 groups.
+HA: Atleast one group will have a different mean alcohol concentration. 
+
+```{r}
+TukeyHSD(anova.results)
+```
+
+We find that the glucose group differs significantly from the maltose and control groups. Differences indicate that the glucose group has the highest mean alcohol concentration, which supports our biological hypothesis. 
+
+
